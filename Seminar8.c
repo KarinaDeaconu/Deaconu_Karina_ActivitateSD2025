@@ -3,6 +3,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+//trebuie sa folositi fisierul masini.txt
+//sau va creati un alt fisier cu alte date
+
 struct StructuraMasina {
 	int id;
 	int nrUsi;
@@ -13,12 +16,13 @@ struct StructuraMasina {
 };
 typedef struct StructuraMasina Masina;
 
-struct Heap {
-	int lungime;
-	int nrElemente;
-	Masina* masini;
+struct Nod
+{
+	Masina info;
+	struct Nod* dr;
+	struct Nod* st;
 };
-typedef struct Heap Heap;
+typedef struct Nod Nod;
 
 Masina citireMasinaDinFisier(FILE* file) {
 	char buffer[100];
@@ -29,13 +33,15 @@ Masina citireMasinaDinFisier(FILE* file) {
 	aux = strtok(buffer, sep);
 	m1.id = atoi(aux);
 	m1.nrUsi = atoi(strtok(NULL, sep));
-	m1.pret = atof(strtok(NULL, sep));
+	m1.pret= atof(strtok(NULL, sep));
 	aux = strtok(NULL, sep);
 	m1.model = malloc(strlen(aux) + 1);
 	strcpy_s(m1.model, strlen(aux) + 1, aux);
+
 	aux = strtok(NULL, sep);
 	m1.numeSofer = malloc(strlen(aux) + 1);
 	strcpy_s(m1.numeSofer, strlen(aux) + 1, aux);
+
 	m1.serie = *strtok(NULL, sep);
 	return m1;
 }
@@ -49,93 +55,138 @@ void afisareMasina(Masina masina) {
 	printf("Serie: %c\n\n", masina.serie);
 }
 
-Heap initializareHeap(int lungime) {
-	Heap heap;
-	heap.lungime = lungime;
-	heap.masini = (Masina*)malloc(sizeof(Masina) * lungime);
-	heap.nrElemente = 0;
-	return heap;
-}
 
-void filtreazaHeap(Heap heap, int pozitieNod) {
-	int fiuStanga = pozitieNod * 2 + 1;
-	int fiuDreapta = pozitieNod * 2 + 2;
-	int pozMax = pozitieNod;
-	if (fiuStanga < heap.nrElemente && heap.masini[pozMax].id < heap.masini[fiuStanga].id) {
-		pozMax = fiuStanga;
-	}
-	if (fiuDreapta < heap.nrElemente && heap.masini[pozMax].id < heap.masini[fiuDreapta].id) {
-		pozMax = fiuDreapta;
-	}
-	if (pozMax != pozitieNod) {
-		Masina aux;
-		aux = heap.masini[pozMax];
-		heap.masini[pozMax] = heap.masini[pozitieNod];
-		heap.masini[pozitieNod] = aux;
-		if (pozMax <= (heap.nrElemente - 2) / 2) {
-			filtreazaHeap(heap, pozMax);
+void adaugaMasinaInArbore(Nod** nod, Masina masinaNoua) {
+	if ((*nod) != NULL)
+	{
+		if (masinaNoua.id > (*nod)->info.id)
+		{
+			adaugaMasinaInArbore(&(*nod)->dr, masinaNoua);
+		}
+		else if (masinaNoua.id < (*nod)->info.id)
+		{
+			adaugaMasinaInArbore(&(*nod)->st, masinaNoua);
 		}
 	}
+	else
+	{
+		(*nod) = (Nod*)malloc(sizeof(Nod));
+		(*nod)->info = masinaNoua;
+		(*nod)->st = NULL;
+		(*nod)->dr = NULL;
+	}
 }
 
-Heap citireHeapDeMasiniDinFisier(const char* numeFisier) { 
+void* citireArboreDeMasiniDinFisier(const char* numeFisier) {
+	//functia primeste numele fisierului, il deschide si citeste toate masinile din fisier
+	//prin apelul repetat al functiei citireMasinaDinFisier()
+	//ATENTIE - la final inchidem fisierul/stream-ul
 	FILE* f = fopen(numeFisier, "r");
-	Heap heap = initializareHeap(10);
-	while(!feof(f)) {
-		Masina m = citireMasinaDinFisier(f);
-		heap.masini[heap.nrElemente] = m;
-		heap.nrElemente++;
-	}
-	for (int i = ((heap.nrElemente - 2) / 2); i >= 0; i--) {
-		filtreazaHeap(heap, i);
+	Nod* nod = NULL;
+	while (!feof(f))
+	{
+		adaugaMasinaInArbore(&nod, citireMasinaDinFisier(f));
 	}
 	fclose(f);
-	return heap;
+	return nod;
 }
 
-void afisareHeap(Heap heap) {
-	for (int i = 0; i < heap.nrElemente; i++) {
-		afisareMasina(heap.masini[i]);
+void afisareMasiniDinArbore(/*arbore de masini*/) {
+	//afiseaza toate elemente de tip masina din arborele creat
+	//prin apelarea functiei afisareMasina()
+	//parcurgerea arborelui poate fi realizata in TREI moduri
+	//folositi toate cele TREI moduri de parcurgere
+}
+
+void afisarePreOrdineRSD(Nod* radacina) {
+	if (radacina != NULL)
+	{
+		afisareMasina(radacina->info);
+		afisarePreOrdineRSD(radacina->st);
+		afisarePreOrdineRSD(radacina->dr);
 	}
 }
 
-void afiseazaHeapAscuns(Heap heap) {
-	for (int i = heap.nrElemente; i < heap.lungime; i++) {
-		afisareMasina(heap.masini[i]);
+
+void afisareInOrdineSRD(Nod* radacina) {
+	if (radacina != NULL)
+	{
+		afisareInOrdineSRD(radacina->st);
+		afisareMasina(radacina->info);
+		afisareInOrdineSRD(radacina->dr);
 	}
 }
 
-Masina extrageMasina(Heap* heap) {
-	Masina gol = heap->masini[0];
-	heap->masini[0] = heap->masini[heap->nrElemente - 1];
-	heap->masini[heap->nrElemente - 1] = gol;
-	heap->nrElemente--;
-	for (int i = (heap->nrElemente - 2) / 2; i >= 0; i--) {
-		filtreazaHeap(*heap, i);
-	}
-	return gol;
+//void afisareInOrdineSRD(Nod* radacina) {
+//	if (radacina != NULL)
+//	{
+//		afisareInOrdineSRD(radacina->st);
+//		afisareMasina(radacina->info);
+//		afisareInOrdineSRD(radacina->dr);
+//	}
+//}
+
+void dezalocareArboreDeMasini(/*arbore de masini*/) {
+	//sunt dezalocate toate masinile si arborele de elemente
 }
 
-void dezalocareHeap(Heap* heap) 
-{
-	for (int i = 0; i < heap->lungime; i++) {
-		free(heap->masini[i].model);
-		free(heap->masini[i].numeSofer);
+Masina getMasinaByID(Nod *radacina, int id) {
+	Masina m;
+	m.id = -1;
+	if (radacina != NULL) {
+		if (id < radacina->info.id) {
+			return getMasinaByID(radacina->st, id);
+		}
+		else {
+			if (id > radacina->info.id) {
+				return getMasinaByID(radacina->dr, id);
+			}
+			else {
+				return radacina->info;
+			}
+		}
+
 	}
-	free(heap->masini);
-	heap->masini = NULL;
-	heap->lungime = 0;
-	heap->nrElemente = 0;
+	return m;
+}
+
+int determinaNumarNoduri(Nod * radacina) {
+	//calculeaza numarul total de noduri din arborele binar de cautare
+	int nrNoduri = 0;
+	if (radacina != NULL) {
+		nrNoduri += determinaNumarNoduri(radacina->st);
+		nrNoduri += determinaNumarNoduri(radacina->dr);
+		nrNoduri += 1;
+	}
+	return nrNoduri;
+}
+
+int calculeazaInaltimeArbore(/*arbore de masini*/) {
+	//calculeaza inaltimea arborelui care este data de 
+	//lungimea maxima de la radacina pana la cel mai indepartat nod frunza
+	return 0;
+}
+
+float calculeazaPretTotal(/*arbore de masini*/) {
+	//calculeaza pretul tuturor masinilor din arbore.
+	return 0;
+}
+
+float calculeazaPretulMasinilorUnuiSofer(/*arbore de masini*/ const char* numeSofer) {
+	//calculeaza pretul tuturor masinilor unui sofer.
+	return 0;
 }
 
 int main() {
-	Heap h;
-	h = citireHeapDeMasiniDinFisier("masini.txt");
-	
-	Masina masina;
-	masina = extrageMasina(&h);
-	afisareMasina(masina);
 
-	dezalocareHeap(&h);
+	Nod* rad = citireArboreDeMasiniDinFisier("masini_arbore.txt");
+	afisarePreOrdineRSD(rad);
+	printf("Masinile\n");
+	afisareInOrdineSRD(rad);
+	printf("\nMasina gasita: ");
+	afisareMasina(getMasinaByID(rad, 6));
+	printf("\nnrnoduri:%d", determinaNumarNoduri(rad));
+
+	//dezalocare
 	return 0;
 }
