@@ -1,0 +1,5 @@
+3,Dumitrescu,15,9
+1,Ionescu,30,4
+2,Popescu,5,8
+5,Dinca,10,5
+4,Pop,20,5
